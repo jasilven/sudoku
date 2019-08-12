@@ -1,6 +1,6 @@
-(ns sudoku)
+(ns sudoku
+  (:require [clojure.set :as set]))
 
-(def matrix (into [] (apply concat (repeat 9 (range 1 10)))))
 (def boxes [#{0 1 2 9 10 11 18 19 20}
             #{3 4 5 12 13 14 21 22 23}
             #{6 7 8 15 16 17 24 25 26}
@@ -13,63 +13,66 @@
 
 (def numbers #{1 2 3 4 5 6 7 8 9})
 
-(def sudoku [5 3 0 0 7 0 0 0 0
-             6 0 0 1 9 5 0 0 0
-             0 9 8 0 0 0 0 6 0
-             8 0 0 0 6 0 0 0 3
-             4 0 0 8 0 3 0 0 1
-             7 0 0 0 2 0 0 0 6
-             0 6 0 0 0 0 2 8 0
-             0 0 0 4 1 9 0 0 5
-             0 0 0 0 8 0 0 7 9])
-
 (defn row
-  "Return row as set for position pos"
-  [mat pos]
-  (let [start (* 9 (mod pos 9))]
-    (-> (into #{} (subvec mat start (+ start 9)))
+  "Return set of row numbers for position pos."
+  [sudoku pos]
+  (let [pos (* 9 (int (/ pos 9)))]
+    (-> (into #{} (subvec sudoku pos (+ pos 9)))
         (disj 0))))
 
 (defn col
-  "Return column as set for position pos."
-  [mat pos]
+  "Return set of column numbers for position pos."
+  [sudoku pos]
   (let [column (mod pos 9)]
-    (-> (into #{} (take-nth 9 (drop column mat)))
+    (-> (into #{} (take-nth 9 (drop column sudoku)))
         (disj 0))))
 
-(defn pos->box
-  "Return box items as set for position pos."
-  [mat pos]
+(defn box
+  "Return set of box numbers for position pos."
+  [sudoku pos]
   (let [positions (first (filter #(if (% pos) %) boxes))]
-    (->> (map #(get mat %) positions)
+    (->> (map #(get sudoku %) positions)
          (remove #{0})
          (into #{}))))
 
 (defn enumerate
   "Return enumeration vector of pos,val pairs for matrix"
-  [mat]
-  (reduce-kv #(conj %1 [%2 %3]) [] mat))
+  [sudoku]
+  (reduce-kv #(conj %1 [%2 %3]) [] sudoku))
 
 (defn blanks
   "Return sequence of blank positions for mat."
-  [mat]
-  (->> (enumerate mat)
+  [sudoku]
+  (->> (enumerate sudoku)
        (filter #(= (second %) 0))))
 
-(defn print-matrix [mat]
+(defn print-sudoku
+  "Print sudoku as table."
+  [sudoku]
   (doseq [row (range 0 9)]
     (doseq [col (range 0 9)]
-      (print (get mat (+ col (* row 9))) " "))
+      (print (get sudoku (+ col (* row 9))) " "))
     (println)))
 
-(comment
-  (enumerate sudoku)
-  (print-matrix sudoku)
-  (blanks sudoku)
-  (pos->box sudoku 1)
-  (row sudoku 7)
-  (row sudoku 2)
-  (col sudoku 7)
-  (col sudoku 1)
-  ;;
-  )
+(defn candidates
+  "Return candidate numbers for given position pos."
+  [sudoku pos]
+  (set/difference numbers
+                  (row sudoku pos)
+                  (col sudoku pos)
+                  (box sudoku pos)))
+
+(defn solve [sudoku]
+  (loop [[state & states] (list {:nums sudoku
+                                 :pos (ffirst (blanks sudoku))
+                                 :cands (candidates sudoku (ffirst (blanks sudoku)))})]
+
+    (if-not (empty? (:cands state))
+      (let [new-mat (assoc (:nums state) (:pos state) (first (:cands state)))
+            blank-pos (ffirst (blanks new-mat))]
+        (if (nil? blank-pos) new-mat
+            (recur (conj states (assoc state :cands (rest (:cands state)))
+                         {:nums new-mat
+                          :pos (ffirst (blanks new-mat))
+                          :cands (candidates new-mat blank-pos)}))))
+      (recur states))))
