@@ -52,7 +52,7 @@
   (reduce-kv #(conj %1 [%2 %3]) [] sudoku))
 
 (defn next-blank
-  "Return sequence of blank positions for mat."
+  "Return first blank positions for mat."
   [sudoku]
   (->> (enumerate sudoku)
        (filter #(zero? (second %)))
