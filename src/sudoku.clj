@@ -52,19 +52,11 @@
   (reduce-kv #(conj %1 [%2 %3]) [] sudoku))
 
 (defn next-blank
-  "Return first blank positions for mat."
+  "Return first blank position"
   [sudoku]
   (->> (enumerate sudoku)
        (filter #(zero? (second %)))
        (ffirst)))
-
-(defn print-sudoku
-  "Print sudoku as simple table."
-  [sudoku]
-  (doseq [row (range 0 9)
-          col (range 0 9)]
-    (print (get sudoku (+ col (* row 9))) " ")
-    (println)))
 
 (defn candidates
   "Return candidate numbers for given position pos."
